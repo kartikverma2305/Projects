@@ -1,2 +1,2 @@
 # demo
-this is demo repo
+This repository contains my projects I have done throughout
