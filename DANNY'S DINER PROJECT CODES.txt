@@ -1,0 +1,106 @@
+1. SELECT customer_id, SUM(price) FROM dannys_diner.sales
+INNER JOIN dannys_diner.menu ON dannys_diner.sales.product_id=dannys_diner.menu.product_id
+GROUP BY customer_id;
+
+2. SELECT customer_id,COUNT(DISTINCT order_date) 
+FROM  dannys_diner.sales
+GROUP BY customer_id;
+
+
+
+4. SELECT product_name,COUNT(dannys_diner.sales.product_id) FROM dannys_diner.sales INNER JOIN
+dannys_diner.menu ON dannys_diner.sales.product_id=dannys_diner.menu.product_id
+where dannys_diner.sales.product_id=(SELECT MAX(dannys_diner.sales.product_id) FROM dannys_diner.sales)
+ GROUP BY product_name ; 
+ 
+5. WITH r as  (SELECT customer_id,dannys_diner.sales.product_id,product_name,COUNT(dannys_diner.sales.product_id) ,RANK()OVER(PARTITION BY customer_id ORDER BY COUNT(dannys_diner.sales.product_id) DESC) FROM dannys_diner.sales
+ INNER JOIN  dannys_diner.menu ON dannys_diner.sales.product_id=dannys_diner.menu.product_id
+ 
+ GROUP BY customer_id,dannys_diner.sales.product_id,product_name
+ ORDER BY customer_id )
+ 
+ SELECT customer_id,product_name FROM r 
+ WHERE rank=1
+
+
+
+6. WITH temp as (SELECT dannys_diner.sales.customer_id,product_name,ROW_NUMBER() 
+OVER (PARTITION BY dannys_diner.sales.customer_id ORDER BY order_date)as r  FROM dannys_diner.sales
+INNER JOIN dannys_diner.menu ON  dannys_diner.sales.product_id
+=dannys_diner.menu.product_id
+INNER JOIN dannys_diner.members ON dannys_diner.sales.customer_id
+=dannys_diner.members.customer_id
+WHERE order_date>=join_date )
+
+SELECT customer_id,product_name FROM temp 
+WHERE r=1;
+
+
+
+7. WITH t as (SELECT dannys_diner.sales.customer_id,product_name,RANK() OVER (PARTITION BY dannys_diner.sales.customer_id ORDER BY order_date DESC)as r  FROM dannys_diner.sales
+INNER JOIN dannys_diner.menu ON  dannys_diner.sales.product_id
+=dannys_diner.menu.product_id
+INNER JOIN dannys_diner.members ON dannys_diner.sales.customer_id
+=dannys_diner.members.customer_id
+WHERE order_date<join_date )
+
+SELECT customer_id,product_name FROM t
+where r=1;
+
+
+
+8. WITH t as (SELECT dannys_diner.sales.customer_id,COUNT(dannys_diner.sales.product_id) as total_items,SUM (price) as amount_spent FROM dannys_diner.sales 
+INNER JOIN dannys_diner.menu ON  dannys_diner.sales.product_id
+=dannys_diner.menu.product_id
+INNER JOIN dannys_diner.members ON dannys_diner.sales.customer_id
+=dannys_diner.members.customer_id
+WHERE order_date<join_date 
+GROUP BY dannys_diner.sales.customer_id        )
+
+SELECT customer_id,total_items,amount_spent from t
+order by customer_id;
+
+
+9. WITH points as (SELECT dannys_diner.sales.customer_id,CASE
+WHEN dannys_diner.sales.product_id=1 THEN SUM(price)*20
+ELSE SUM(price)*10
+END as c
+FROM dannys_diner.sales 
+INNER JOIN dannys_diner.menu ON  dannys_diner.sales.product_id
+=dannys_diner.menu.product_id
+GROUP BY dannys_diner.sales.customer_id,dannys_diner.sales.product_id
+)
+SELECT customer_id,SUM(c) as pnts FROM points
+
+
+11.SELECT dannys_diner.sales.customer_id,order_date,product_name,price,
+CASE WHEN order_date<join_date OR dannys_diner.members.customer_id
+IS  NULL THEN 'N'
+ELSE 'Y'
+END as member
+FROM dannys_diner.sales INNER JOIN dannys_diner.menu ON
+dannys_diner.sales.product_id=dannys_diner.menu.product_id
+FULL OUTER JOIN dannys_diner.members ON dannys_diner.sales.customer_id=
+dannys_diner.members.customer_id
+ORDER BY customer_id,order_date
+
+
+
+12. WITH ran as(SELECT dannys_diner.sales.customer_id,order_date,product_name,price,
+CASE WHEN order_date<join_date OR dannys_diner.members.customer_id
+IS  NULL THEN 'N'
+ELSE 'Y'
+END as member
+FROM dannys_diner.sales INNER JOIN dannys_diner.menu ON
+dannys_diner.sales.product_id=dannys_diner.menu.product_id
+FULL OUTER JOIN dannys_diner.members ON dannys_diner.sales.customer_id=
+dannys_diner.members.customer_id
+ORDER BY customer_id,order_date
+)
+
+SELECT customer_id,order_date,product_name,price,member ,
+CASE when member='N' THEN null
+ ELSE  RANK() OVER (PARTITION BY customer_id,member ORDER BY order_date) 
+END 
+FROM ran; 
+
